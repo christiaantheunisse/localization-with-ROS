@@ -50,15 +50,6 @@ def generate_launch_description():
         condition=IfCondition(using_bag_data),
     )
 
-    # Publish a static transform between the `baselink` (robot) frame and the `laser` (Lidar) frame
-    static_trans_laser_baselink = Node(
-        package="tf2_ros",
-        executable="static_transform_publisher",
-        arguments=(
-            "--x 0.085 --y 0 --z 0 --roll 0 --pitch 0 --yaw 3.14 " + "--frame-id base_link --child-frame-id laser"
-        ).split(" "),
-    )
-
     return LaunchDescription(
         [
             using_bag_data_launch_arg,
@@ -66,6 +57,5 @@ def generate_launch_description():
             slam_launch,
             rviz,
             rosbag_player,
-            static_trans_laser_baselink,
         ]
     )

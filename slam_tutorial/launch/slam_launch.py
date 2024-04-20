@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import (
     TextSubstitution,
     LaunchConfiguration,
@@ -9,7 +9,7 @@ from launch.substitutions import (
 )
 from launch.conditions import IfCondition
 
-from launch_ros.actions import Node, SetParameter
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -60,6 +60,15 @@ def generate_launch_description():
         condition=IfCondition(AndSubstitution(use_mapping, NotSubstitution(use_localization))),
     )
 
+    # Publish a static transform between the `base_link` (robot) frame and the `laser` (Lidar) frame
+    static_trans_laser_baselink = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        arguments=(
+            "--x 0.085 --y 0 --z 0 --roll 0 --pitch 0 --yaw 3.14 " + "--frame-id base_link --child-frame-id laser"
+        ).split(" "),
+    )
+
     return LaunchDescription(
         [
             localization_launch_arg,
@@ -67,5 +76,6 @@ def generate_launch_description():
             map_file_launch_arg,
             slam_node_localization,
             slam_node_mapping,
+            static_trans_laser_baselink,
         ]
     )
