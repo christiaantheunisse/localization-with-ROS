@@ -1,0 +1,79 @@
+velocity_ekf_node:
+    ros__parameters:
+        frequency: 30.0
+        sensor_timeout: 0.1 # not sure about this one
+        publish_tf: true
+        two_d_mode: true  # planar mode
+        print_diagnostics: true
+        permit_corrected_publication: false # not sure about this one (default = false)
+        reset_on_time_jump: true
+        
+        map_frame: map               
+        odom_frame: odom                 
+        base_link_frame: base_link  
+        world_frame: odom # So it provides the `odom` to `base_link` transform
+   
+        # The linear velocity from the wheel encoders is used
+        odom0: /odometry/wheel_encoders
+        odom0_config: [false, false, false,     # x, y, z
+                       false, false, false ,    # roll, pitch, yaw
+                       true, true, false,       # x', y', z'
+                       false, false, false,     # roll', pitch', yaw'
+                       false, false, false]     # x'', y'', z''
+        odom0_queue_size: 2
+        odom0_differential: false
+
+        # The derivative of the yaw (so angular velocity) from the IMU is used
+        imu0: /imu_data
+        imu0_config: [false, false, false,      # x, y, z
+                      false, false, true,       # roll, pitch, yaw
+                      false, false, false,      # x', y', z'
+                      false, false, false,      # roll', pitch', yaw'
+                      false, false, false]      # x'', y'', z''
+        imu0_differential: true # angular velocity from yaw derivative
+        imu0_queue_size: 7
+
+        # Uncertainty in the prediction step; uncertainty in the update step follows from the sensor messages covariances
+        process_noise_covariance: [0.001, 0.001, 0., 0., 0., 0.001, 0.01, 0., 0., 0., 0., 0.01, 0.1, 0.1, 0.]
+        # [x, y, z, roll, pitch, yaw, x', y', z', roll', pitch', yaw', x'', y'', z'']
+        initial_estimate_covariance: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+        
+position_ekf_node:
+    ros__parameters:
+        frequency: 30.0
+        sensor_timeout: 0.1 # not sure about this one
+        publish_tf: true
+        two_d_mode: true  # planar mode
+        print_diagnostics: true
+        permit_corrected_publication: false # not sure about this one (default = false)
+        reset_on_time_jump: true
+        
+        map_frame: map               
+        odom_frame: odom                 
+        base_link_frame: base_link  
+        world_frame: map # So it provides the `map` to `odom` transform
+   
+        # The linear and angular velocity is taken from the other ekf that merges the IMU and the wheel encoder sensor data.
+        odom0: /odometry/velocity_ekf
+        odom0_config: [false, false, false,     # x, y, z
+                       false, false, false ,    # roll, pitch, yaw
+                       true, true, false,       # x', y', z'
+                       false, false, true,      # roll', pitch', yaw'
+                       false, false, false]     # x'', y'', z''
+        odom0_queue_size: 2
+        odom0_differential: false
+
+        # The position from the SLAM is used
+        pose0: /slam_pose
+        pose0_config: [true, true, false,  # x, y, z
+                       false, false, true,    # roll, pitch, yaw
+                       false, false, false,   # x', y', z'
+                       false, false, false,    # roll', pitch', yaw'
+                       false, false, false]      # x'', y'', z''
+        pose0_queue_size: 3
+
+        # Uncertainty in the prediction step; uncertainty in the update step follows from the sensor messages covariances
+        process_noise_covariance: [0.001, 0.001, 0., 0., 0., 0.001, 0.01, 0., 0., 0., 0., 0.01, 0.1, 0.1, 0.]
+        # [x, y, z, roll, pitch, yaw, x', y', z', roll', pitch', yaw', x'', y'', z'']
+        initial_estimate_covariance: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+        

@@ -66,8 +66,30 @@ A lot more information can be found on the [GitHub page](https://github.com/Stev
 
 ## EKF
 
-Setting up the EKF is a more complicated task, but will significantly increase the localization performance compared to using the raw odometry together with the SLAM. This is not intended to be a complete guide on the [`robot_localization`](https://github.com/automaticaddison/robot_localization) packages, but the goal is to provide you with a basic understanding, some pointers and a working setup experiment with. I hope this enables you find your way in the documentation and to relatively setup your own ekf.
+Setting up the Extended Kalman Filter (EKF) from the `robot_localization` packages is a more complicated task, but will significantly increase the localization performance compared to using the raw odometry together with the SLAM. This is not intended to be a complete guide on the [`robot_localization`](https://github.com/automaticaddison/robot_localization) packages, but the goal is to provide you with a basic understanding, some pointers and a working setup to experiment with. I hope this enables you find your way in the documentation and to setup the EKF on your own robot.
+
+
 
 First, some information on the frames and the transforms.  tf etc. Current setup: raw odmetry and odom should provide base_link to odom tf.  slam_toolbox updates odom => map tf. Odom drifts over time, IMU also.
 
 New situation
+
+Odometry EKF
+
+    ros2 launch ekf_tutorial odometry_ekf_launch.py  using_bag_data:=true
+
+The purple oval shape gives the uncertainty on the position (covariance). The uncertainty should increase over time. However, the uncertainty on the odometry which is defined in the message is 0 (default value).
+
+Navigation EKF
+
+    ...
+
+    # Non-holonomic robot example: https://docs.ros.org/en/melodic/api/robot_localization/html/configuring_robot_localization.html
+    # https://answers.ros.org/question/405263/prediction-step-and-imu-orientation-have-little-impact-on-robot_localization-position/
+    # https://answers.ros.org/question/50870/what-frame-is-sensor_msgsimuorientation-relative-to/
+    # Slides: https://roscon.ros.org/2015/presentations/robot_localization.pdf
+
+
+## Exercise
+
+To get your hands dirty you could try to combine the functionality from both packages. You should make a launch file that uses the bag file from the `slam_tutorial` package. Use the published scan messages to get a pose estimate with the `slam_toolbox`. Subsequently, apply two ekfs to get a filtered pose estimate.
