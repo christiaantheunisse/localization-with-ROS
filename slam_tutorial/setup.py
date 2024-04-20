@@ -15,6 +15,9 @@ setup(
         (os.path.join("share", package_name, "launch"), glob(os.path.join("launch", "*launch.[pxy][yma]*"))),
         (os.path.join("share", package_name, "config"), glob(os.path.join("config/*.yaml"))),
         (os.path.join("share", package_name, "map"), glob(os.path.join("map/*"))),
+        (os.path.join("share", package_name, "rviz"), glob(os.path.join("rviz/*.rviz"))),
+        # copy the bag directories while maintaining the directory structure
+        *[(os.path.join("share", package_name, d), glob(os.path.join(d, "*"))) for d in glob("bag/*/", recursive=True)]
     ],
     install_requires=['setuptools'],
     zip_safe=True,

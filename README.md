@@ -14,10 +14,10 @@ Download the repository in a workspace and build it. Make sure to use the same w
     cd ~/tutorial_ws/src
     git clone git@github.com:christiaantheunisse/localization-with-ROS.git .  # to install without project folder
     cd ..
-    colcon build --packages-select 
+    colcon build --packages-select slam_tutorial
     source install/setup.bash
 
-Make sure the run `source install/setup.bash` in every new terminal window or add it to your `.bashrc`. Otherwise, ROS will through an error about the package not being found.
+Make sure to source your workspace (run `source ~/tutorial_ws/install/setup.bash`) in every new terminal window or add it to your `~/.bashrc`. Otherwise, ROS will give an error about the package not being found.
 
 Download `slam_toolbox`:
 
@@ -31,49 +31,43 @@ Download `robot_localizatoin`:
 
 The [`slam_toolbox`](https://github.com/SteveMacenski/slam_toolbox) can either perform SLAM or just localization. The launch file `slam_launch.py`  launches a node that performs SLAM. To launch this file, run the following command:
 
-    ros2 launch slam_tutorial slam_launch.py play_rosbag:=true
+    ros2 launch slam_tutorial slam_launch.py using_bag_data:=true
 
-For the visualization, you need to run RViz2 (in a seperate terminal window). Use the provided configuration file to display the right topics by default. 
-
-    rviz2 -d ~/tutorial_ws/src/slam_tutorial/rviz/slam.rviz
-
-The bag data can be played using the command below (also in a seperate terminal window).
-
-<!---
-The `--clock` is very important, since it will tell the bag player to publish the time at the moment of recording the bag file to the `/clock` topic. When you run your nodes with `use_sim_time:=true`, they will use the time on this topic for the clock (i.e. when you call `self.get_clock()`/`this->get_clock()` in your node). Using this setup, the stamp in the header of your messages is comparable to the clock time, which might be important in some situation. Trust me, getting this right can save you a lot of debugging ;).
--->
-
-    ros2 bag play ~/tutorial_ws/src/bag_files/sensor_data --clock
 
 If every works correctly, you will see something like this in RViz2:
 
-!!!!!!!! Add picture RVIZ2
+!!!!!!!! Add gif RVIZ2
 
-The following commands can be used to save the map and use for localization later on. The relative path starts in the workspace, so providing only a name will store the map in `~/tutorial_ws`.
+The following command can be used to save the map and use it for localization later on. The relative path for the `filename` argument of the service starts in the root of the workspace, so providing only a name will store the map in `~/tutorial_ws`.
 
     ros2 service call /slam_toolbox/serialize_map slam_toolbox/srv/SerializePoseGraph "{filename: src/slam_tutorial/map/my_first_map}"
 
-Also possible to localize within this environment using the just created map. You might observe that the map still gets updated in some situations, but this is intended behaviour as the slam_toolbox is intended to do lifelong mapping (as far as I understand).
+As mentioned before, it is also possible to localize within an environment with an previously created map. Rebuild the package so ROS can find the just created map file. It is also possible to use an already available map which is called `room_map`.
 
+    ros2 launch slam_tutorial localization_launch.py using_bag_data:=true map_file:=my_first_map
 
-It is important to set the `start_map_pose` .. 
+You might observe that the map still gets updated during localization, but this is intended behaviour as the slam_toolbox is intended to do lifelong mapping. 
 
-#### Explanation about the inner workings
+### Explanation about the inner workings
 
+According to the ROS [convention](https://www.ros.org/reps/rep-0105.html) ([simple explanation](https://robotics.stackexchange.com/questions/109759/confusion-on-tf2-frame-name-conventions-base-link-vs-odom)), the `slam_toolbox` is responsible for the global position update (no drift over time) and therefore publishes the `map -> odom` transform. So another node should publish the `odom -> base_link` transform, since the `base_link` frame is the fixed frame of the robot (the bag file contains this transform and publishes it on `/tf`). The `odom -> base_link` transform can be calculated based on the odometry (wheel encoders, IMU, etc.) which drift over time. So the `map -> base_link` transform defines the pose correct pose with respect to the real-world, but might contain jumps / be discontinouos. The `odom -> base_link` transform is continuous, but drifts over time, which is especially relevant for velocity and accelerations.
 
+As far as I understand it, the `slam_toolbox` uses a SLAM algorithm that assumes that the updated pose should be in the vicinity of the previous pose, since it searches around the previous pose to find the updated pose. So a sudden 'jump' of the robot in the `map` frame (=real world), will violate this constraint and make the algorithm lose track of its pose from which it is not able to recover. These problem can in occur in one of the following situations:
+
+- When the computational load is too high, the calculations will not be finished in time and the difference between two consecutive poses will big enough to violate the assumption.
+- At start up, when the `map_start_pose` is too far of from the actual pose. This is only relevant in the localization mode.
 
 #### For a deeper dive
-- Possible to change the update rate / conditions
-- Lifecycle node
-- Initial position estimate to topic /startpose or with the rviz function ...
-- There is a RViz plugin which can be used if you do a lot of mapping and saving of files
-- More info about the description can be found on the [Github page](https://github.com/SteveMacenski/slam_toolbox) and in this [ROSCon Talk](https://vimeo.com/378682207).
-
+A lot more information can be found on the [GitHub page](https://github.com/SteveMacenski/slam_toolbox) and in this [ROSCon Talk](https://vimeo.com/378682207). The GitHub page has a clear documentation of all the parameters and available services. Among other things, it is possible to...
+- ...change the update rate and conditions.
+- ...use it as a lifecycle node.
+- ...set the initial pose through RVIZ's '2D Pose Estimate' or `/initialpose` topic.
+- ...use an RViz plugin which can be used if you do a lot of mapping and saving of files.
 
 ## EKF
 
-Setting up the EKF is a more complicated task, but will significantly increase the localization performance compared to using the raw odometry together with the SLAM. This is not intended to be a complete guide on the [`robot_localization`](https://github.com/automaticaddison/robot_localization) packages, but the goal is to provide you with a basic understanding and some pointers. I hope this enables you find your way in the documentation and to relatively setup your own ekf.
+Setting up the EKF is a more complicated task, but will significantly increase the localization performance compared to using the raw odometry together with the SLAM. This is not intended to be a complete guide on the [`robot_localization`](https://github.com/automaticaddison/robot_localization) packages, but the goal is to provide you with a basic understanding, some pointers and a working setup experiment with. I hope this enables you find your way in the documentation and to relatively setup your own ekf.
 
-First, some information on frames and tf etc. Current setup: raw odmetry and odom should provide base_link to odom tf.  slam_toolbox updates odom => map tf. Odom drifts over time, IMU also.
+First, some information on the frames and the transforms.  tf etc. Current setup: raw odmetry and odom should provide base_link to odom tf.  slam_toolbox updates odom => map tf. Odom drifts over time, IMU also.
 
 New situation
