@@ -46,6 +46,8 @@ def generate_launch_description():
             "play",
             PathJoinSubstitution([FindPackageShare("slam_tutorial"), "bag", "sensor_data"]),
             "--clock",
+            "-x",
+            "/imu_data"
         ],
         condition=IfCondition(using_bag_data),
     )
